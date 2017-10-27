@@ -46,7 +46,7 @@ MODx.grid.multiTVgrid{/literal}{$tv->id}{literal} = function(config) {
         "render": {
             scope: this,
             fn: function(grid) {
-            
+                
             //Special Handling of Keystrokes within cell-editor, needs more improvements    
             var sm=grid.getSelectionModel();
                 
@@ -130,7 +130,6 @@ MODx.grid.multiTVgrid{/literal}{$tv->id}{literal} = function(config) {
                          }
 						grid.collectItems();
                         grid.getView().refresh();
-
  
                         // ************************************
                       }
@@ -179,7 +178,8 @@ MODx.grid.multiTVgrid{/literal}{$tv->id}{literal} = function(config) {
     this.getStore().pathconfigs=config.pathconfigs;
     
 	this.loadData();
-    this.on('click', this.onClick, this);  
+    this.on('click', this.onClick, this); 
+     
 };
 Ext.extend(MODx.grid.multiTVgrid{/literal}{$tv->id}{literal},MODx.grid.LocalGrid,{
     _renderUrl: function(v,md,rec) {
@@ -292,11 +292,11 @@ Ext.extend(MODx.grid.multiTVgrid{/literal}{$tv->id}{literal},MODx.grid.LocalGrid
     ,addNewItem: function(olditem){
             if (olditem){
                 var json = '[' + Ext.util.JSON.encode(olditem) + ']';
+                var items=Ext.util.JSON.decode(json);
             }else{
-                var json = '{/literal}{$newitem|escape}{literal}';
+                var items = {/literal}{$newitem}{literal};
             }
-       
-            var items=Ext.util.JSON.decode(json);
+            
             var item = items[0];            
             var s = this.getStore();
             var addNewItemAt = '{/literal}{$customconfigs.addNewItemAt|default}{literal}';
@@ -628,8 +628,24 @@ Ext.extend(MODx.grid.multiTVgrid{/literal}{$tv->id}{literal},MODx.grid.LocalGrid
          MODx.fireResourceFormChange();   
 	}
     
+    ,onFormSuccess: function(){
+        //this.store.commitChanges();   
+        
+        var griddata=this.store.data;
+		for(i = 0; i <  griddata.length; i++) {
+             griddata.items[i].dirty = false;
+        }        
+        
+    }
+    
     ,collectItems: function(){
-		var items=[];
+        
+        var form = Ext.getCmp('modx-panel-resource');
+        if (form){
+            form.on('success', this.onFormSuccess, this);     
+        }
+           
+    	var items=[];
 		// read jsons from grid-store-items 
 
         var griddata=this.store.data;
@@ -637,7 +653,7 @@ Ext.extend(MODx.grid.multiTVgrid{/literal}{$tv->id}{literal},MODx.grid.LocalGrid
  			items.push(griddata.items[i].json);
         }
 
-        if (this.call_collectmigxitems){
+        if (this.call_collectmigxitems || this.call_collectmigxitems_once){
         items = Ext.util.JSON.encode(items); 
         MODx.Ajax.request({
             url: '{/literal}{$config.connectorUrl}{literal}'
@@ -677,7 +693,8 @@ Ext.extend(MODx.grid.multiTVgrid{/literal}{$tv->id}{literal},MODx.grid.LocalGrid
                     
                 },scope:this}
             }
-        });            
+        });
+        this.call_collectmigxitems_once = false;            
         }else{
         if (items.length >0){
            Ext.get('tv{/literal}{$tv->id}{literal}').dom.value = Ext.util.JSON.encode(items); 
